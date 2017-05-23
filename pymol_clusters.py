@@ -1,5 +1,7 @@
 #!/usr/bin/env python2.7
 from __future__ import print_function
+import __main__
+__main__.pymol_argv = ['pymol','-qc']
 import pymol
 from pymol import cmd
 from wordom_parser import read_avg_strength, read_avg_clusters
@@ -7,6 +9,7 @@ from wordom_parser import read_avg_strength, read_avg_clusters
 import sys
 import re
 import seaborn as sns
+import pickle
 
 # Library functions
 def select_clusters(clusters):
@@ -167,7 +170,8 @@ def main():
     
     # Finish pymol launch
     pymol.finish_launching()
-    
+#    cmd.feedback("disable","all","actions")
+#    cmd.feedback("disable","all","results")
     # Set variables here
     pdb = arguments.pdb[0]
     avg = arguments.avg[0]
@@ -188,6 +192,8 @@ def main():
 #    print("Hello")
     #sys.exit(1)
     # Select the cutoff
+    with open("cutoffs", 'wb') as f:
+            pickle.dump(list(clusters.keys()), f)
     if cut is not None:
         # If provided
         cut = float(cut)
@@ -203,7 +209,9 @@ def main():
 #    print(clusters_freq)
     clusters = clusters[cut][freq]
     #print(type(clusters_freq))
-    #print(clusters_freq.keys())
+    print(clusters_freq.keys())
+    with open("freq", 'wb') as f:
+            pickle.dump(list(clusters_freq.keys()), f)
     #print(type(freq))
     #clusters = clusters_freq[80.0]
 #    print(clusters_freq)
@@ -226,72 +234,26 @@ def main():
     
     #cmd.color("gray70")
     #cmd.set("sphere_scale",0.75)
-    #cmd.space("cmyk")
+    cmd.space("cmyk")
     #cmd.set("ray_shadow","off")
     #cmd.bg_color("white")
-    #sele = "chain A and resi 240 and not name H*"
-    #cmd.show("sticks",sele)
-    #cmd.util.cnc(sele)
+    sele = "chain A and resi 131 and not name H*"
+    cmd.show("sticks",sele)
+    cmd.util.cnc(sele)
+    #cmd.center("chain A")
+    cmd.deselect()
+    ### cut below here and paste into script ###
+    cmd.set_view ([\
+                   0.185403526,   -0.784912288,   -0.591205537,\
+                   -0.726189077,    0.295874894,   -0.620551527,\
+                   0.662004888,    0.544381559,   -0.515144050,\
+                   -0.001714554,   -0.001769811, -125.023078918,\
+                   30.330446243,   78.181671143,  146.038742065,\
+                   98.763908386,  151.776306152,  -20.000000000] )
+    outfile="cluster{}-{}.png".format(cut,freq)
+    cmd.save(outfile)
+### cut above here and paste into script ###
 
-    
-    #cmd.select("thiopurine-binding_site", "resi 29+32+39+40+42+152+156+157+183+185+195+196+222+224+226+227+230+237")
-    #cmd.select("active_site_loop", "resi 34-47")
-    #cmd.select("sam_site", "resi 29+33+40+69+71+90+91+134+135+152+153+157")
-#    cmd.deselect()
-#    cmd.set_view ([\
-#                   -0.305658966,   -0.713990152,    0.629898429,\
-#                   -0.654916644,    0.637859344,    0.405215889,\
-#                   -0.691106737,   -0.288665175,   -0.662581384,\
-#                   0.001623333,    0.000937471,  -46.785041809,\
-#                   46.941642761,   34.004577637,   31.637348175,\
-#                   -13.265086174,  106.867988586,  -20.000000000] )
-#    #S
-#    if "S.pdb" in pdb:
-#        print("PDB IS S.pdb")
-#        cmd.set_view ([\
-#                       -0.409751743,   -0.219807968,    0.885309339,\
-#                       -0.638088524,    0.762622535,   -0.105983727,\
-#                       -0.651861429,   -0.608328938,   -0.452747405,\
-#                       0.001109511,    0.000494776,  -46.016716003,\
-#                       47.185314178,   35.512237549,   32.690845490,\
-#                       -14.064048767,  106.068992615,  -20.000000000] )
-#
-#    #C
-#    if "C.pdb" in pdb:
-#        print("PDB is C.pdb")
-#        cmd.set_view ([\
-#                        -0.258558095,   -0.645871639,    0.718325078,\
-#                       -0.237979725,    0.763276696,    0.600630045,\
-#                       -0.936205566,   -0.015643222,   -0.351061910,\
-#                       0.001335760,   -0.000327773,  -39.497772217,\
-#                       45.714607239,   35.260444641,   30.005773544,\
-#                       -20.550725937,   99.582305908,  -20.000000000] )
-#                      #                  -0.462704241,   -0.198452532,    0.864010990,\
-#                  -0.555044293,    0.824802518,   -0.107798725,\
-#                  -0.691241384,   -0.529438317,   -0.491791070,\
-#                  0.000923563,    0.000070601,  -46.123336792,\
-#                  46.376838684,   33.472648621,   30.712085724,\
-#                  -13.914966583,  106.218093872,  -20.000000000] )
-#
-#   cmd.set_view ([-0.358574003,   -0.621906042,    0.696170390,\
-#                  -0.551006794,    0.742994249,    0.379926175,\
-#                  -0.753525376,   -0.247360140,   -0.609091520,\
-#                  0.000761475,   -0.000055134,  -52.477943420,\
-#                  45.892639160,   32.543830872,   30.253210068,\
-#                  20.382640839,   84.580200195,  -20.000000000 ])
-   # cmd.png(pdb+'.png')
-
-
-#   cmd.set_view ([-0.313590229,    0.487615854,    0.814794183,\
-#                 0.007288054,    0.859284937,   -0.511437297,\
-#                 -0.949524581,   -0.154441506,   -0.273017645,\
-#                 0.000000000,    0.000000000, -151.701156616,\
-#                 33.086368561,   36.058006287,   31.844902039,\
-#                 119.602340698,  183.799972534,  -20.000000000] )
-#   
-#
-
-    print(shw)
     # Show clusters
     if shw is None:
         show_cluster(clusters)
@@ -299,8 +261,8 @@ def main():
         shw = [int(c) for c in shw.split(',')]
         for c in shw:
             show_cluster(clusters[c - 1])
-
-
+    cmd.save(outfile)
+    cmd.quit()
 
 if __name__ == '__main__':
     main()
