@@ -10,6 +10,8 @@ import sys
 import re
 import seaborn as sns
 import pickle
+import os
+from multiprocessing import Pool
 
 # Library functions
 def select_clusters(clusters):
@@ -140,7 +142,59 @@ def show_cluster(clusters):
             cmd.show("lines", sele)
             cmd.show("spheres", sele)
 
+#def visualize_in_pymol(input_args):
+def visualize_in_pymol(args,outfolder,clusters,interactions,pdb,cut,freq):
 
+    #(args,outfolder,clusters,interactions,pdb,cut,freq)=input_args
+    #print(cut)
+    #return
+    pymol.finish_launching()
+    cmd.reinitialize()
+    cmd.load(pdb)
+    cmd.hide("everything")
+#    cmd.show("ribbon")
+    cmd.show("cartoon")
+    # Create bindings and selections, and color them
+    bond_connections(clusters, interactions)
+    selections = select_clusters(clusters)
+    colors = color_selections(selections)
+    print(colors)
+
+#    colors = color_selections([sele])
+
+
+    #cmd.color("gray70")
+    #cmd.set("sphere_scale",0.75)
+    cmd.space("cmyk")
+    #cmd.set("ray_shadow","off")
+    #cmd.bg_color("white")
+    sele = "chain A and resi 131 and not name H*"
+    cmd.show("sticks",sele)
+    cmd.util.cnc(sele)
+    #cmd.center("chain A")
+    cmd.deselect()
+    ### cut below here and paste into script ###
+    cmd.set_view ([\
+                   0.185403526,   -0.784912288,   -0.591205537,\
+                   -0.726189077,    0.295874894,   -0.620551527,\
+                   0.662004888,    0.544381559,   -0.515144050,\
+                   -0.001714554,   -0.001769811, -125.023078918,\
+                   30.330446243,   78.181671143,  146.038742065,\
+                   98.763908386,  151.776306152,  -20.000000000] )
+    outfile="{}cluster{}-{}.png".format(outfolder,cut,freq)
+    if args.ray or args.generate_all:
+        cmd.save(outfile)
+### cut above here and paste into script ###
+
+    # Show clusters
+    if args.show[0] is None:
+        show_cluster(clusters)
+    else:
+        shw = [int(c) for c in args.show[0].split(',')]
+        for c in args.show[0]:
+            show_cluster(clusters[c - 1])
+    cmd.save(outfile)
+    cmd.quit()
 
 
 
@@ -162,107 +216,140 @@ def main():
         "-show", nargs=1, default=[None], metavar="int[,int[...]]",
         help="Show specified clusters")
     parser.add_argument(
-        "avg", nargs=1, metavar="AVGfile",
+        "-ray", action='store_true', help="raytrace and save fig")
+    parser.add_argument(
+        "-generate_all", action='store_true', help="generate raytraced figs for all cutoffs and frequences")
+    parser.add_argument(
+        "avg", nargs=1, metavar="AVGfile", type=str,
         help="Wordom PSN avg file")
     parser.add_argument(
-        "pdb", nargs=1, metavar="PDBfile", help="PDB file to draw")
-    arguments = parser.parse_args(argv[1:])
+        "pdb", nargs=1, metavar="PDBfile", type=str,help="PDB file to draw")
+    args = parser.parse_args()
     
     # Finish pymol launch
-    pymol.finish_launching()
+#    pymol.finish_launching()
 #    cmd.feedback("disable","all","actions")
 #    cmd.feedback("disable","all","results")
     # Set variables here
-    pdb = arguments.pdb[0]
-    avg = arguments.avg[0]
-    cut = arguments.c[0]
-    freq= float(arguments.f[0])
-    shw = arguments.show[0]
-    
+    pdb = args.pdb[0]
+    avg = args.avg[0]
+    cut = args.c[0]
+    freq= float(args.f[0])
+    shw = args.show[0]
+    ray = args.ray or args.generate_all
+
+
+    outfolder=os.path.abspath(avg)
     interactions = {}
-    clusters = {}
+    clusters_all = {}
     with open(avg, 'r') as infile:
         interactions = read_avg_strength(infile)
         #print(interactions)
         #sys.exit()
         infile.seek(0)
-        clusters = read_avg_clusters(infile)
-        print(clusters)
+        clusters_all = read_avg_clusters(infile)
+        #print(clusters)
         #sys.exit()
 #    print("Hello")
     #sys.exit(1)
     # Select the cutoff
-    with open("cutoffs", 'wb') as f:
-            pickle.dump(list(clusters.keys()), f)
+    #with open("cutoffs", 'wb') as f:
+    #        pickle.dump(list(clusters.keys()), f)
     if cut is not None:
         # If provided
         cut = float(cut)
     else:
         # Default
-        cutoffs = list(clusters.keys())
+        cutoffs = list(clusters_all.keys())
         cutoffs.sort()
         cut = cutoffs[0]
-        
-    # Select clusters
-    print(cut)
-    clusters_freq = clusters[cut]
-#    print(clusters_freq)
-    clusters = clusters[cut][freq]
-    #print(type(clusters_freq))
-    print(clusters_freq.keys())
-    with open("freq", 'wb') as f:
-            pickle.dump(list(clusters_freq.keys()), f)
-    #print(type(freq))
-    #clusters = clusters_freq[80.0]
-#    print(clusters_freq)
-#    print(interactions)
-     #ys.exit()
-#    print(clusters)
-    cmd.load(pdb)
-    cmd.hide("everything")
-#    cmd.show("ribbon")
-    cmd.show("cartoon")
-    
-    # Create bindings and selections, and color them
-    bond_connections(clusters, interactions)
-    selections = select_clusters(clusters)
-    colors = color_selections(selections)
-    print(colors)
 
-#    colors = color_selections([sele])
+    cuts_to_sweep=[cut]
+    freq_to_sweep=[freq]
 
-    
-    #cmd.color("gray70")
-    #cmd.set("sphere_scale",0.75)
-    cmd.space("cmyk")
-    #cmd.set("ray_shadow","off")
-    #cmd.bg_color("white")
-    sele = "chain A and resi 131 and not name H*"
-    cmd.show("sticks",sele)
-    cmd.util.cnc(sele)
-    #cmd.center("chain A")
-    cmd.deselect()
-    ### cut below here and paste into script ###
-    cmd.set_view ([\
-                   0.185403526,   -0.784912288,   -0.591205537,\
-                   -0.726189077,    0.295874894,   -0.620551527,\
-                   0.662004888,    0.544381559,   -0.515144050,\
-                   -0.001714554,   -0.001769811, -125.023078918,\
-                   30.330446243,   78.181671143,  146.038742065,\
-                   98.763908386,  151.776306152,  -20.000000000] )
-    outfile="cluster{}-{}.png".format(cut,freq)
-    cmd.save(outfile)
-### cut above here and paste into script ###
+    if args.generate_all:
+        cuts_to_sweep=clusters_all.keys()
+        freq_to_sweep=clusters_all[cut].keys()
 
-    # Show clusters
-    if shw is None:
-        show_cluster(clusters)
-    else:
-        shw = [int(c) for c in shw.split(',')]
-        for c in shw:
-            show_cluster(clusters[c - 1])
-    cmd.save(outfile)
-    cmd.quit()
+    todo=[]
+    for cut_ in cuts_to_sweep:
+        for freq_ in freq_to_sweep:
+            print("{} {}".format(cut_,freq_))
+            todo.append((args,outfolder,clusters_all[cut_][freq_],interactions,pdb,cut_,freq_))
+    #print(len(todo))
+    #sys.exit()
+    #pool = Pool(processes=8)
+    #pool.map(visualize_in_pymol,todo)
+    #print(todo)
+    #visualize_in_pymol((todo))
+    visualize_in_pymol(args,outfolder,clusters_all[cut][freq],interactions,pdb,cut,freq)
+    #for cut_ in cuts_to_sweep:
+    #    for freq_ in freq_to_sweep:
+
+
+    if 1==0:
+        # Select clusters
+        print("Running for {} {}".format(cut_,freq_))
+    #    clusters_freq = clusters_all[cut_]
+    #    print(clusters_freq)
+        clusters = clusters_all[cut_][freq_]
+        #print(type(clusters_freq))
+        #print(clusters_freq.keys())
+        #with open("freq", 'wb') as f:
+        #        pickle.dump(list(clusters_freq.keys()), f)
+        #print(type(freq))
+        #clusters = clusters_freq[80.0]
+    #    print(clusters_freq)
+    #    print(interactions)
+         #ys.exit()
+    #    print(clusters)
+        cmd.reinitialize()
+        cmd.load(pdb)
+        cmd.hide("everything")
+    #    cmd.show("ribbon")
+        cmd.show("cartoon")
+
+        # Create bindings and selections, and color them
+        bond_connections(clusters, interactions)
+        selections = select_clusters(clusters)
+        colors = color_selections(selections)
+        print(colors)
+
+    #    colors = color_selections([sele])
+
+
+        #cmd.color("gray70")
+        #cmd.set("sphere_scale",0.75)
+        cmd.space("cmyk")
+        #cmd.set("ray_shadow","off")
+        #cmd.bg_color("white")
+        sele = "chain A and resi 131 and not name H*"
+        cmd.show("sticks",sele)
+        cmd.util.cnc(sele)
+        #cmd.center("chain A")
+        cmd.deselect()
+        ### cut below here and paste into script ###
+        cmd.set_view ([\
+                       0.185403526,   -0.784912288,   -0.591205537,\
+                       -0.726189077,    0.295874894,   -0.620551527,\
+                       0.662004888,    0.544381559,   -0.515144050,\
+                       -0.001714554,   -0.001769811, -125.023078918,\
+                       30.330446243,   78.181671143,  146.038742065,\
+                       98.763908386,  151.776306152,  -20.000000000] )
+        outfile="{}cluster{}-{}.png".format(outfolder,cut,freq)
+        if args.ray:
+            cmd.save(outfile)
+    ### cut above here and paste into script ###
+
+        # Show clusters
+        if shw is None:
+            show_cluster(clusters)
+        else:
+            shw = [int(c) for c in shw.split(',')]
+            for c in shw:
+                show_cluster(clusters[c - 1])
+        cmd.save(outfile)
+        cmd.quit()
 
 if __name__ == '__main__':
     main()

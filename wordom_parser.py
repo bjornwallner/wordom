@@ -65,7 +65,7 @@ def read_avg_clusters(infile):
                    # print current + " " + entries
                 elif m_new.search(line):
                     current = round(float(line.split()[1]),1)
-                    print(current)
+                 #   print(current)
                     clusters[current] = {}
                 elif m_new_freq.search(line):
                     freq = round(float(line.split()[1]),1)
