@@ -28,6 +28,13 @@ parser.add_argument('-psn',  action='store_true',
                     help='Do protein structure network analysis, requires -ref REF.pdb')
 parser.add_argument('-psnpath',  action='store_true',
                     help='Do PSNPATH analysis, requires -ref REF.pdb')
+
+parser.add_argument('-psn_Imin', default=3.5,type=float,
+                    help='The lowest accepted residue-residue interaction strength value')
+parser.add_argument('-psn_corr', default=0.5,type=float,
+                    help='The lowest accepted DCCM correlation value')
+parser.add_argument('-psn_maxbad', default=30.0,type=float,
+                    help='Maximal fraction of non-productive frames over which the calculation is skipped.')
 parser.add_argument('-overwrite',  action='store_true',
                     help='will overwrite if outfile exist')
 parser.add_argument('-verbose',  action='store_true',
@@ -172,13 +179,16 @@ if len(trjs) > 0:
         #cmd = 'wordom -ia rmsd --TITLE rmsd1 --SELE "/*/*/CA" --TRJOUT {} -imol {} -itrj {}'.format(outfile_aligned,args.ref, outfile)
         #print cmd
         #os.system(cmd)
-        outfile_cross_corr=outdir+"cross-corr"
+        #outfile_cross_corr=outdir+"cross-corr_lmi"
+        outfile_cross_corr = outdir + "cross-corr"
         if not os.path.exists(outfile_cross_corr):
-            cmd = 'wordom -ia corr --TITLE cross-corr --SELE "/*/*/*" --TYPE DCC --LEVEL RES -imol {} -itrj {} -nopbc'.format(args.ref,outfile_aligned)
+            cmd = 'wordom -ia corr --TITLE cross-corr --SELE "/*/*/*" --TYPE DCC --LEVEL RES -imol {} -itrj {} -nopbc'.format(args.ref, outfile_aligned)
+            #cmd = 'wordom -ia corr --TITLE cross-corr_lmi --SELE "/*/*/*" --TYPE LMI --LEVEL RES -imol {} -itrj {} -nopbc'.format(
+            #    args.ref, outfile_aligned)
             if args.verbose:
                 print cmd
             os.system(cmd)
-            os.system("mv cross-corr {}".format(outdir))
+            os.system("mv cross-corr_lmi {}".format(outdir))
         else:
             print "CORR: {} already exist, skipping this step".format(outfile_cross_corr)
 
@@ -191,26 +201,28 @@ if len(trjs) > 0:
         #print cmd
         #os.system(cmd)
         psnpath_input = outdir + 'psnpath.inp'
+        psn_name="path-{}-{}-{}".format(args.psn_Imin,args.psn_corr,args.psn_maxbad)
         f = open(psnpath_input, 'w')
         f.write("""BEGIN psnpath 
---TITLE ppath1 
+--TITLE {} 
 --PSN rawpsn
 --CORR cross-corr
---IMIN 4.5 
---CUTOFF 0.5 
+--IMIN {} 
+--CUTOFF {} 
 --PAIR A:131 reslist.txt 
---MAXBAD 30.0 
+--MAXBAD {} 
 --FRAME 1 
 --STAT 1 
 --LOG 1 
 END
-""")
+""".format(psn_name,args.psn_Imin,args.psn_corr,args.psn_maxbad))
         f.close()
         cmd = "cd {};wordom -iE {}".format(outdir, os.path.abspath(psnpath_input))
         # if args.verbose:
         print cmd
         # sys.exit()
-        # os.system(cmd)
+        print "outfile: {}".format(psn_name)
+        os.system(cmd)
         
     #wordom -ia corr --TITLE cross-corr --SELE "/*/*/*" --TYPE DCC --LEVEL RES -imol ref.pdb -itrj whole_traj.127.aligned.dcd -nopbc
 

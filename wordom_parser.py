@@ -1,5 +1,45 @@
 import re
 import sys
+import pandas as pd
+import collections
+
+def read_cross_corr(infile):
+    dict=collections.OrderedDict()
+    for line in open(infile,'r'):
+        if line.startswith("#"):
+            continue
+        line = line.rstrip().lstrip()
+        #print line
+        #line = line.rstrip()
+        (i,j,resi,resj,corr)=line.split()
+        #remove chain
+        resi = re.sub('^\w:\w', '', resi)
+        resj = re.sub('^\w:\w', '', resj)
+        #print resi
+        if len(resi) == 2:
+            resi = "0" + resi
+        if len(resj) == 2:
+            resj = "0" + resj
+        if not resi in dict:
+            dict[resi]=collections.OrderedDict()
+        #corr_filtered=corr
+        dict[resi][resj] = 0
+        if float(corr) > 0.5:
+            dict[resi][resj] = float(corr)
+
+        #t=line.split()
+        #print t
+        #print line
+
+    #dict2={} #collections.OrderedDict()
+    ##for k1 in dict.keys():
+    #    dict2[k1]={} #collections.OrderedDict()
+    #    for k2 in dict.keys():
+    #        dict2[k1][k2]=dict[k1][k2]
+    df=pd.DataFrame.from_dict(dict,orient='index') #columns')
+    ##print df
+    #sys.exit()
+    return(df)
 
 
 # Read residue interaction strength from PSN analysis avg output files
