@@ -218,6 +218,8 @@ def main():
     parser.add_argument(
         "-ray", action='store_true', help="raytrace and save fig")
     parser.add_argument(
+        "-overwrite", action='store_true', help="overwrite if fig already exists")
+    parser.add_argument(
         "-generate_all", action='store_true', help="generate raytraced figs for all cutoffs and frequences")
     parser.add_argument(
         "avg", nargs=1, metavar="AVGfile", type=str,
@@ -240,6 +242,10 @@ def main():
 
 
     outfolder=os.path.abspath(avg)
+    outfile = "{}cluster{}-{}.png".format(outfolder, cut, freq)
+    if not args.overwrite and os.path.exists(outfile):
+        print("\n{} already exist.\nUse -overwrite if you want to overwrite the existing file.\n".format(outfile))
+        sys.exit()
     interactions = {}
     clusters_all = {}
     with open(avg, 'r') as infile:
@@ -336,7 +342,7 @@ def main():
                        -0.001714554,   -0.001769811, -125.023078918,\
                        30.330446243,   78.181671143,  146.038742065,\
                        98.763908386,  151.776306152,  -20.000000000] )
-        outfile="{}cluster{}-{}.png".format(outfolder,cut,freq)
+        outfile = "{}cluster{}-{}.png".format(outfolder, cut, freq)
         if args.ray:
             cmd.save(outfile)
     ### cut above here and paste into script ###
