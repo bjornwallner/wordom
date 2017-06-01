@@ -209,7 +209,7 @@ if len(trjs) > 0:
 --CORR cross-corr
 --IMIN {} 
 --CUTOFF {} 
---PAIR A:131 reslist.txt 
+--PAIR reslist2.txt reslist.txt 
 --MAXBAD {} 
 --FRAME 1 
 --STAT 1 
