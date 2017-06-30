@@ -15,6 +15,18 @@ import argparse
 import pandas as pd
 import collections
 
+def write_info(path,freq,outfile):
+    nodes=path.split('=>')
+    f=open(outfile,'w')
+    f.write("#{} {}\n".format("Highest freq path:", path))
+    f.write("#{} {}\n".format("res","freq"))
+
+    for res in sorted(freq,key=freq.get,reverse=True): #freq.keys():
+        f.write("{} {}\n".format(res,freq[res]))
+
+    f.close()
+    #sys.exit()
+
 def visualize_path((path,freq,pdb,outfile)):
     nodes=path.split('=>')
     save_pse=True
@@ -23,7 +35,8 @@ def visualize_path((path,freq,pdb,outfile)):
     #print freq
     #sys.exit()
     #print nodes
-    node_color=sns.color_palette("RdBu",n_colors=len(nodes))
+    node_color=sns.color_palette("Reds",n_colors=len(nodes))
+    node_color.reverse()
     #print node_color
     cmd.reinitialize()
     cmd.load(pdb)
@@ -39,6 +52,7 @@ def visualize_path((path,freq,pdb,outfile)):
     cmd.set_color(colorname, node_color[0])
     cmd.color(colorname,a)
     cmd.label(a,'" %s:%s" % (resi, resn)')
+    cmd.set("label_color", "red", a)
     #cmd.label(a, '"%s" % (resi)')
     for i in range(1,len(nodes)):
 
@@ -63,7 +77,7 @@ def visualize_path((path,freq,pdb,outfile)):
         a=b
     #cmd.color(node_color[len)],b)
     #cmd.space("cmyk")
-    #cmd.set("ray_shadow","off")
+    cmd.set("ray_shadow","off")
     #cmd.bg_color("white")
     #cmd.label_position([3,2,1])
     cmd.set("label_position", (2, 2, 2))
@@ -82,9 +96,16 @@ def visualize_path((path,freq,pdb,outfile)):
 
     scale_cutoff=min(0.25,min(node_freqs.values())/norm_factor)
 
+    #print nodes
+    #print node_freqs
+    #print freq
+    #sys.exit()
+
+
+
     for res in freq.keys():
         scale=freq[res]/norm_factor
-        #print res,scale,scale_cutoff
+        #print res,freq[res],scale,scale_cutoff
         if scale>scale_cutoff:
             (chain,resnum)=re.split(':\w',res)
             sele = "chain {} and resi {} and name CA".format(chain,resnum)
@@ -92,7 +113,8 @@ def visualize_path((path,freq,pdb,outfile)):
             cmd.set("sphere_scale", scale,selection=sele)
             if not res in nodes: #give residue not on highest freq path a different color
                 last_color=len(nodes)-1
-                colorname="color"+str(last_color)
+                #colorname="color"+str(last_color)
+                colorname = "grey60" #color" + str(last_color)
                 cmd.color(colorname,sele)
                 cmd.label(sele, '" %s%s" % (one_letter[resn],resi)')
 
@@ -129,6 +151,7 @@ def visualize_path((path,freq,pdb,outfile)):
 def get_res_freq(frame_file):
     freq=collections.OrderedDict()
     freq['all']=collections.OrderedDict()
+    total_paths=0
     with open(frame_file) as fp:
         for line in fp:
             line=line.rstrip()
@@ -138,6 +161,7 @@ def get_res_freq(frame_file):
                 frame=m.group(1)
                 path=m.group(2)
                 path_res=path.split('=>')
+                total_paths+=1
                 if not frame in freq:
                     freq[frame]=collections.OrderedDict()
 
@@ -155,7 +179,8 @@ def get_res_freq(frame_file):
    # for frame in freq.keys():
    #     print frame,freq[frame]
 
-    total_count=sum(freq['all'].values())
+    #total_count=sum(freq['all'].values())
+    total_count=total_paths #len(freq['all'].values())
     #print freq['all']
     for node in freq['all'].keys():
         freq['all'][node]=float(freq['all'][node])/float(total_count)
@@ -166,7 +191,7 @@ def get_res_freq(frame_file):
 
 def main():
     parser = argparse.ArgumentParser(description='visualising path from psnpath')
-    parser.add_argument('-log', default=None, type=str, nargs=1, required=True,
+    parser.add_argument('-psnpath', default=None, type=str, nargs=1, required=True,
                         help='log file from psnpath')
     parser.add_argument(
         "-pdb", nargs=1, type=str, help="PDB file to draw")
@@ -180,7 +205,7 @@ def main():
         "-overwrite", action='store_true', help="overwrite if fig already exists")
     #pymol.finish_launching()
     args = parser.parse_args()
-    logfile=args.log[0]
+    logfile=args.psnpath[0]
     pdb=args.pdb[0]
     #print args
     #print args.minlen
@@ -217,15 +242,21 @@ def main():
             name_prefix_count = "{}/{}PSNPath-{}-{}-{}".format(dirname, count[name1],basename_noext, name1, name2)
             frame_file=name_prefix +".frame"
             #stat_file=name_prefix + ".stat"
-            res_freq=get_res_freq(frame_file)
+
             #continue
             #stat=get_stat(stat_file)
             outfile="{}.freq{}.len{}.png".format(name_prefix_count,row.HighFreqVal,row.HighFreqLen)
+            infofile=re.sub('.png','.info',outfile)
+
+            res_freq = get_res_freq(frame_file)
             if not os.path.exists(outfile) or args.overwrite:
                 print outfile
                 jobs.append((row.HighFreqPath,row.HighFreqVal,pdb,outfile))
                 #visualize_path((row.HighFreqPath,row.HighFreqVal,pdb,outfile))
                 visualize_path((row.HighFreqPath, res_freq, pdb, outfile))
+            if not os.path.exists(infofile) or args.overwrite:
+                print infofile
+                write_info(row.HighFreqPath, res_freq, infofile)
                 #sys.exit()
             count[name1]+=1
             #sys.exit()
