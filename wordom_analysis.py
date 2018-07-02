@@ -28,7 +28,10 @@ parser.add_argument('-psn',  action='store_true',
                     help='Do protein structure network analysis, requires -ref REF.pdb')
 parser.add_argument('-psnpath',  action='store_true',
                     help='Do PSNPATH analysis, requires -ref REF.pdb')
-
+parser.add_argument('-reslist1', default='reslist.txt',type=str,
+                    help='end positions for path analysis'),
+parser.add_argument('-reslist2', default='reslist2.txt',type=str,
+                    help='start positions for path analysis'),
 parser.add_argument('-psn_Imin', default=3.5,type=float,
                     help='The lowest accepted residue-residue interaction strength value')
 parser.add_argument('-psn_corr', default=0.5,type=float,
@@ -109,12 +112,12 @@ if len(trjs) > 0:
         print "MERGE: {} already exist, skipping.".format(outfile)
 
     cmd="wordom -F range -beg {} -end {}  -itrj {} -otrj {}".format(start_frame,end_frame,intraj,outtraj)
-    outdir="output_{}_{}_{}/".format(args.name,start_frame,end_frame)
+    outdir="{}output_{}_{}_{}/".format(args.prefix,args.name,start_frame,end_frame)
     psn_raw=outdir +"rawpsn"
     if args.psn or args.psnpath:
         if args.verbose:
             print "Do PSN"
-        outdir="output_{}_{}_{}/".format(args.name,start_frame,end_frame)
+        #outdir="output_{}_{}_{}/".format(args.name,start_frame,end_frame)
         psn_outfile=outdir + "rawpsn"
         if not os.path.exists(psn_outfile):
 
@@ -128,31 +131,31 @@ if len(trjs) > 0:
             psn_input = outdir + 'psn.inp'
             f=open(psn_input,'w')
             f.write("""BEGIN psn
-    --TITLE psn
-    --SELE /*/*/* 
-    --INTMIN 0.0:10.0:0.5 
-    --DISTCUTOFF 4.5 
-    --STABLECUTOFF 0.5 
-    --HUBCONTCUTOFF 3 
-    --TERMINI 0 
-    --VERBOSE 1 
-    END
-    """)
+--TITLE psn
+--SELE /*/*/* 
+--INTMIN 0.0:10.0:0.5 
+--DISTCUTOFF 4.5 
+--STABLECUTOFF 0.5 
+--HUBCONTCUTOFF 3 
+--TERMINI 0 
+--VERBOSE 1 
+END
+""")
             f.close()
             #psn_input_auto = args.prefix + 'psn.auto.inp'
             psn_input_auto = outdir + 'psn.auto.inp'
             f=open(psn_input_auto,'w')
             f.write("""BEGIN psn
-    --TITLE psn
-    --SELE /*/*/* 
-    --INTMIN AUTO 
-    --DISTCUTOFF 4.5 
-    --STABLECUTOFF 0.5 
-    --HUBCONTCUTOFF 3 
-    --TERMINI 0 
-    --VERBOSE 1 
-    END
-    """)
+--TITLE psn
+--SELE /*/*/* 
+--INTMIN AUTO 
+--DISTCUTOFF 4.5 
+--STABLECUTOFF 0.5 
+--HUBCONTCUTOFF 3 
+--TERMINI 0 
+--VERBOSE 1 
+END
+""")
             f.close()
 
             cmd = "cd {};wordom -iA {} -itrj {} -imol {} -nopbc".format(dirpath,os.path.abspath(psn_input),os.path.abspath(outfile),os.path.abspath(args.ref))
@@ -188,7 +191,7 @@ if len(trjs) > 0:
             if args.verbose:
                 print cmd
             os.system(cmd)
-            os.system("mv cross-corr_lmi {}".format(outdir))
+            os.system("mv cross-corr {}".format(outdir))
         else:
             print "CORR: {} already exist, skipping this step".format(outfile_cross_corr)
 
@@ -217,6 +220,8 @@ if len(trjs) > 0:
 END
 """.format(psn_name,args.psn_Imin,args.psn_corr,args.psn_maxbad))
         f.close()
+        os.system("mv {} {}/reslist.txt".format(args.reslist1,outdir))
+        os.system("mv {} {}/reslist2.txt".format(args.reslist2,outdir))
         cmd = "cd {};wordom -iE {}".format(outdir, os.path.abspath(psnpath_input))
         # if args.verbose:
         print cmd
